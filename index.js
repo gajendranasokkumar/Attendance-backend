@@ -15,7 +15,7 @@ app.listen(3000, () => {
   console.log("Server is Running....port : 3000");
 });
 
-app.put("/", (request, response) => {
+app.post("/", (request, response) => {
   const { id, password } = request.body;
 
   //   const salt = bcrypt.genSaltSync(10);
