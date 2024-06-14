@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+const mongoose = require('mongoose')
 
 const leaveSchema = mongoose.Schema({
     id: String,
@@ -6,9 +6,11 @@ const leaveSchema = mongoose.Schema({
     leavetype: String,
     halfleave:String,
     paidleave: String,
-    fromdate: Date,
-    todate: Date,
-    reason: String
+    fromdate: String,
+    todate: String,
+    reason: String,
+    status: String,
+    reportingperson: String
 })
 
 const LeaveModel = mongoose.model('leaveForms', leaveSchema)

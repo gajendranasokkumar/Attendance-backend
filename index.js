@@ -8,6 +8,7 @@ app.use(express.json());
 app.use(cors());
 
 const LoginModel = require("./models/LoginModel");
+const LeaveModel = require("./models/LeaveModel");
 
 mongoose.connect("mongodb://localhost:27017/attendance");
 
@@ -27,7 +28,7 @@ app.post("/", (request, response) => {
   LoginModel.findOne({ id: id })
     .then((res) => {
       if (bcrypt.compareSync(password, res.password)) {
-        response.status(200)
+        response.status(200);
         response.send("Person Present in DB");
         return response;
       } else {
@@ -37,4 +38,25 @@ app.post("/", (request, response) => {
     .catch((err) => {
       response.send(err);
     });
+});
+
+app.post("/leaveform", (request, response) => {
+  const leaveDetails = request.body;
+  LeaveModel.create(leaveDetails)
+    .then((res) => response.json(res))
+    .catch((err) => response.status(400).send("Cannot Apply For Leave"));
+});
+
+app.get("/leavelist", (request, response) => {
+  LeaveModel.find()
+    .then((res) => response.json(res))
+    .catch((err) => response.json(err));
+});
+
+app.post("/updateleave", (request, response) => {
+  const { formId, currentStatus } = request.body;
+  console.log(formId)
+  LeaveModel.findByIdAndUpdate(formId, { status: currentStatus }, { new: true })
+    .then((res) => response.json(res))
+    .catch((err) => response.status(400).send("Cannot Update Status"));
 });
