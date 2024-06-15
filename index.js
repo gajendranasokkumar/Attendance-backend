@@ -55,8 +55,8 @@ app.get("/leavelist", (request, response) => {
 
 app.post("/updateleave", (request, response) => {
   const { formId, currentStatus } = request.body;
-  console.log(formId)
-  LeaveModel.findByIdAndUpdate(formId, { status: currentStatus }, { new: true })
+  console.log(currentStatus)
+  LeaveModel.findByIdAndUpdate(formId, { status: currentStatus })
     .then((res) => response.json(res))
     .catch((err) => response.status(400).send("Cannot Update Status"));
 });
