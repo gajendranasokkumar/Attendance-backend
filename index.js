@@ -2,10 +2,18 @@ const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken"); 
 
 const app = express();
 app.use(express.json());
-app.use(cors());
+
+const corsOptions = {
+  origin: 'http://localhost:5173', 
+  credentials: true, 
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE', 
+};
+
+app.use(cors(corsOptions));
 
 const LoginModel = require("./models/LoginModel");
 const LeaveModel = require("./models/LeaveModel");
@@ -28,8 +36,13 @@ app.post("/", (request, response) => {
   LoginModel.findOne({ id: id })
     .then((res) => {
       if (bcrypt.compareSync(password, res.password)) {
+        const payload = {
+          id: id,
+        };
+        const jwtToken = jwt.sign(payload, "attendanceProject");
         response.status(200);
-        response.send("Person Present in DB");
+        response.send({ jwtToken, msg: "Person Present in DB" });
+        // response.send("Person Present in DB");
         return response;
       } else {
         return response.status(400).send("Password is incorrect");
@@ -55,7 +68,7 @@ app.get("/leavelist", (request, response) => {
 
 app.post("/updateleave", (request, response) => {
   const { formId, currentStatus } = request.body;
-  console.log(currentStatus)
+  console.log(currentStatus);
   LeaveModel.findByIdAndUpdate(formId, { status: currentStatus })
     .then((res) => response.json(res))
     .catch((err) => response.status(400).send("Cannot Update Status"));
