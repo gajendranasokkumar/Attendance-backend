@@ -10,7 +10,7 @@ const employeeScheme = mongoose.Schema({
     gender: String,
     maritalstatus: String,
     hrpolicy: String,
-    dojoining: String,
+    dateofjoining: String,
     punchid: String,
     company: String,
     branch: String,
