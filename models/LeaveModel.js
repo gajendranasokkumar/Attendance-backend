@@ -3,6 +3,7 @@ const mongoose = require('mongoose')
 const leaveSchema = mongoose.Schema({
     id: String,
     name: String,
+    approvaldate: String,
     leavetype: String,
     halfleave:String,
     paidleave: String,

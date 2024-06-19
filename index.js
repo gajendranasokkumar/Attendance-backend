@@ -80,7 +80,7 @@ app.post("/", async (req, res) => {
     const payload = { id: id };
     const jwtToken = jwt.sign(payload, "attendanceProject");
 
-    const employeeData = await EmployeeModel.findOne({id: id});
+    const employeeData = await EmployeeModel.findOne({ id: id });
     if (!employeeData) {
       return res.status(404).json({ msg: "Employee data not found" });
     }
@@ -112,7 +112,16 @@ app.get("/leavelist", (request, response) => {
 app.post("/updateleave", (request, response) => {
   const { formId, currentStatus } = request.body;
   // console.log(currentStatus);
-  LeaveModel.findByIdAndUpdate(formId, { status: currentStatus })
+  const date = new Date();
+  let day = date.getDate();
+  let month = date.getMonth() + 1;
+  let year = date.getFullYear();
+  let currentDate = `${day}-${month}-${year}`;
+  // console.log(currentDate);
+  LeaveModel.findByIdAndUpdate(formId, {
+    status: currentStatus,
+    approvaldate: currentDate,
+  })
     .then((res) => response.json(res))
     .catch((err) => response.status(400).send("Cannot Update Status"));
 });
