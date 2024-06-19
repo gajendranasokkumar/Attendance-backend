@@ -64,7 +64,7 @@ app.listen(3000, () => {
 // });
 
 app.post("/", async (req, res) => {
-  // console.log(req.body)
+  console.log(req.body)
   const { des, id, password } = req.body;
 
   try {
@@ -84,11 +84,12 @@ app.post("/", async (req, res) => {
     if (!employeeData) {
       return res.status(404).json({ msg: "Employee data not found" });
     }
-    // console.log(employeeData)
+    console.log(employeeData)
     res.status(200).json({
       jwtToken,
       msg: "Person present in DB",
       data: employeeData,
+      person: (des == 'Employee') ? des: "Admin"
     });
   } catch (err) {
     console.error(err);
@@ -128,10 +129,10 @@ app.post("/updateleave", (request, response) => {
 
 app.post("/addemployee", (request, response) => {
   const employeeDetails = request.body;
-  // console.log(employeeDetails);
+  console.log(employeeDetails);
   EmployeeModel.create(employeeDetails)
     .then((res) => {
-      const salt = bcrypt.genSaltSync(10);
+      const salt = bcrypt.genSaltSync(10);  
       const hash = bcrypt.hashSync(employeeDetails.id, salt);
       LoginModel.create({
         user: "Employee",
@@ -143,3 +144,24 @@ app.post("/addemployee", (request, response) => {
     })
     .catch((err) => response.status(400).send("Cannot Create Employee"));
 });
+
+
+
+// app.get('/fetch-data', async (req, res) => {
+//     try {
+//         // Use Promise.all to fetch data concurrently
+//         const [dataA, dataB, dataC] = await Promise.all([
+//             ModelA.findOne({}), // Adjust the query as needed
+//             ModelB.findOne({}),
+//             ModelC.findOne({})
+//         ]);
+
+//         res.json({
+//             modelA: dataA,
+//             modelB: dataB,
+//             modelC: dataC
+//         });
+//     } catch (error) {
+//         res.status(500).json({ message: 'Error fetching data', error });
+//     }
+// });
