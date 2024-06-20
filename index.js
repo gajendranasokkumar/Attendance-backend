@@ -18,6 +18,7 @@ app.use(cors(corsOptions));
 const LoginModel = require("./models/LoginModel");
 const LeaveModel = require("./models/LeaveModel");
 const EmployeeModel = require("./models/EmployeeModel");
+const AttendanceModel = require("./models/AttendanceModel");
 
 mongoose
   .connect("mongodb://localhost:27017/attendance", {
@@ -64,7 +65,7 @@ app.listen(3000, () => {
 // });
 
 app.post("/", async (req, res) => {
-  console.log(req.body)
+  console.log(req.body);
   const { des, id, password } = req.body;
 
   try {
@@ -84,12 +85,12 @@ app.post("/", async (req, res) => {
     if (!employeeData) {
       return res.status(404).json({ msg: "Employee data not found" });
     }
-    console.log(employeeData)
+    console.log(employeeData);
     res.status(200).json({
       jwtToken,
       msg: "Person present in DB",
       data: employeeData,
-      person: (des == 'Employee') ? des: "Admin"
+      person: des == "Employee" ? des : "Admin",
     });
   } catch (err) {
     console.error(err);
@@ -132,7 +133,7 @@ app.post("/addemployee", (request, response) => {
   console.log(employeeDetails);
   EmployeeModel.create(employeeDetails)
     .then((res) => {
-      const salt = bcrypt.genSaltSync(10);  
+      const salt = bcrypt.genSaltSync(10);
       const hash = bcrypt.hashSync(employeeDetails.id, salt);
       LoginModel.create({
         user: "Employee",
@@ -144,8 +145,6 @@ app.post("/addemployee", (request, response) => {
     })
     .catch((err) => response.status(400).send("Cannot Create Employee"));
 });
-
-
 
 // app.get('/fetch-data', async (req, res) => {
 //     try {
@@ -165,3 +164,28 @@ app.post("/addemployee", (request, response) => {
 //         res.status(500).json({ message: 'Error fetching data', error });
 //     }
 // });
+
+app.post("/getCheckInDetails", (request, response) => {
+  const { id, date } = request.body;
+  AttendanceModel.findOne({ id: id, date: date })
+    .then((res) => response.json(res))
+    .catch((err) => response.status(400).send("Cannot Update Checkin"));
+});
+
+app.post("/checkin", (request, response) => {
+  const checkINDetails = request.body;
+  AttendanceModel.create(checkINDetails)
+    .then((res) => response.json(res))
+    .catch((err) => response.status(400).send("Cannot Update Checkin"));
+});
+
+app.post("/checkout", (request, response) => {
+  const { id, date, checkouttime, ischeckedout } = request.body;
+  AttendanceModel.findOneAndUpdate(
+    { id: id, date: date },
+    { checkouttime: checkouttime, ischeckedout: ischeckedout },
+    { new: true }
+  )
+    .then((res) => response.json(res))
+    .catch((err) => response.status(400).send("Cannot Update Checkout"));
+});
