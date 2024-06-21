@@ -189,3 +189,11 @@ app.post("/checkout", (request, response) => {
     .then((res) => response.json(res))
     .catch((err) => response.status(400).send("Cannot Update Checkout"));
 });
+
+
+app.post("/getAttendanceHistory", (request, response) => {
+  const { id } = request.body;
+  AttendanceModel.find({ id: id })
+    .then((res) => response.json(res))
+    .catch((err) => response.status(400).send("Cannot Update Checkin"));
+});
