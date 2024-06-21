@@ -190,10 +190,158 @@ app.post("/checkout", (request, response) => {
     .catch((err) => response.status(400).send("Cannot Update Checkout"));
 });
 
-
 app.post("/getAttendanceHistory", (request, response) => {
   const { id } = request.body;
   AttendanceModel.find({ id: id })
     .then((res) => response.json(res))
     .catch((err) => response.status(400).send("Cannot Update Checkin"));
+});
+
+// app.get("/punch", async (req, res) => {
+//   const { punchid } = req.body;
+
+//   if (!punchid) {
+//     return res.status(400).send("Missing punchid in request");
+//   }
+
+//   try {
+//     const result = await AttendanceModel.aggregate([
+//       {
+//         $match: { punchid: punchid }, // Filter by the given punchid
+//       },
+//       {
+//         $lookup: {
+//           from: "employees", // Collection name to join
+//           localField: "punchid", // Field in the Attendance collection
+//           foreignField: "punchid", // Field in the Employees collection
+//           as: "userDetails", // Name for the array field to be added to each output document
+//         },
+//       },
+//       {
+//         $unwind: "$userDetails", // Unwind the array to get a single document
+//       },
+//     ]);
+
+//     res.send(result);
+//   } catch (err) {
+//     res.status(500).send(err.message);
+//   }
+// });
+
+// app.post("/punchcheckin", async (request, response) => {
+//   const { punchid } = request.body;
+//   const employeeDetails = await EmployeeModel.findOne({ punchid: punchid });
+
+//   const now = new Date();
+//   // const day = String(now.getDate()).padStart(2, "0");
+//   // const month = String(now.getMonth() + 1).padStart(2, "0");
+//   // const year = now.getFullYear();
+//   // const formattedDate = `${day}-${month}-${year}`;
+
+//   // const hours = String(now.getHours()).padStart(2, "0");
+//   // const minutes = String(now.getMinutes()).padStart(2, "0");
+//   // const seconds = String(now.getSeconds()).padStart(2, "0");
+//   // const timeString = `${hours}:${minutes}:${seconds}`;
+
+//   const formattedDate = now.toLocaleDateString('en-GB').split('/').join('-');
+//   const timeString = now.toTimeString().split(' ')[0];
+
+//   const attendanceObj = {
+//     id: employeeDetails?.id,
+//     name: employeeDetails?.name,
+//     person: employeeDetails?.person,
+//     punchid: employeeDetails?.punchid,
+//     company: employeeDetails?.company,
+//     branch: employeeDetails?.branch,
+//     designation: employeeDetails?.designation,
+//     multibranchattendance: employeeDetails?.multibranchattendance,
+//     shiftgroup: employeeDetails?.shiftgroup,
+//     shift: employeeDetails?.shift,
+//     punchtype: employeeDetails?.punchtype,
+//     geolocation: employeeDetails?.geolocation,
+//     checkintime: timeString,
+//     checkouttime: "",
+//     location: employeeDetails?.branch,
+//     date: formattedDate,
+//     ischeckedin: true,
+//     ischeckedout: false,
+//   };
+
+//   AttendanceModel.create(attendanceObj)
+//     .then((res) => response.json(res))
+//     .catch((err) => response.status(400).send("Cannot Update Checkin"));
+// });
+
+app.post("/punchcheckin", async (req, res) => {
+  try {
+    const { punchid } = req.body;
+    const employeeDetails = await EmployeeModel.findOne({ punchid });
+    if (!employeeDetails) {
+      return res.status(404).send("Employee not found");
+    }
+
+    const now = new Date();
+    const formattedDate = now.toLocaleDateString("en-GB").split("/").join("-");
+
+    const existingAttendance = await AttendanceModel.findOne({
+      punchid,
+      date: formattedDate,
+    });
+    if (existingAttendance) {
+      return res.status(200).send("Already Checked In");
+    }
+
+    const timeString = now.toTimeString().split(" ")[0];
+
+    const attendanceObj = {
+      id: employeeDetails.id,
+      name: employeeDetails.name,
+      person: employeeDetails.person,
+      punchid: employeeDetails.punchid,
+      company: employeeDetails.company,
+      branch: employeeDetails.branch,
+      designation: employeeDetails.designation,
+      multibranchattendance: employeeDetails.multibranchattendance,
+      shiftgroup: employeeDetails.shiftgroup,
+      shift: employeeDetails.shift,
+      punchtype: employeeDetails.punchtype,
+      geolocation: employeeDetails.geolocation,
+      checkintime: timeString,
+      checkouttime: "",
+      location: employeeDetails.branch,
+      date: formattedDate,
+      ischeckedin: true,
+      ischeckedout: false,
+    };
+
+    const result = await AttendanceModel.create(attendanceObj);
+    res.json(result);
+  } catch (err) {
+    res.status(500).send("Cannot Update Checkin");
+  }
+});
+
+app.post("/punchcheckout", async (request, response) => {
+  const { punchid } = request.body;
+
+  const now = new Date();
+  const formattedDate = now.toLocaleDateString("en-GB").split("/").join("-");
+  const timeString = now.toTimeString().split(" ")[0];
+
+
+  const existingAttendance = await AttendanceModel.findOne({
+    punchid,
+    date: formattedDate,
+  });
+  if (existingAttendance.ischeckedout) {
+    return response.status(200).send("Already Checked Out");
+  }
+
+  AttendanceModel.findOneAndUpdate(
+    { punchid: punchid, date: formattedDate },
+    { checkouttime: timeString, ischeckedout: true },
+    { new: true }
+  )
+    .then((res) => response.json(res))
+    .catch((err) => response.status(400).send("Cannot Update Checkout"));
 });
