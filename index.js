@@ -328,7 +328,6 @@ app.post("/punchcheckout", async (request, response) => {
   const formattedDate = now.toLocaleDateString("en-GB").split("/").join("-");
   const timeString = now.toTimeString().split(" ")[0];
 
-
   const existingAttendance = await AttendanceModel.findOne({
     punchid,
     date: formattedDate,
@@ -344,4 +343,72 @@ app.post("/punchcheckout", async (request, response) => {
   )
     .then((res) => response.json(res))
     .catch((err) => response.status(400).send("Cannot Update Checkout"));
+});
+
+app.post("/currentleavecount", async (request, response) => {
+  const { id } = request.body;
+  try {
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth() + 1;
+    const currentYear = currentDate.getFullYear();
+
+    const fromDateStart = `${currentYear}-${currentMonth
+      .toString()
+      .padStart(2, "0")}-01`;
+    const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
+    const nextYear = nextMonth === 1 ? currentYear + 1 : currentYear;
+    const fromDateEnd = `${nextYear}-${nextMonth
+      .toString()
+      .padStart(2, "0")}-01`;
+
+    // console.log('From Date Range:', fromDateStart, 'to', fromDateEnd);
+
+    const count = await LeaveModel.countDocuments({
+      id: id,
+      fromdate: {
+        $gte: fromDateStart,
+        $lt: fromDateEnd,
+      },
+    });
+
+    // console.log('Count of Documents:', count);
+    response.status(200).send({ count: count });
+  } catch (error) {
+    // console.error('Error:', error);
+    response.status(500).send({ message: "Internal Server Error" });
+  }
+});
+
+app.post("/checkuser", async (request, response) => {
+  const { id } = request.body;
+  await LoginModel.findOne({ id: id })
+    .then((res) => {
+      if (res != null) {
+        response.send({ code: 200 });
+      } else {
+        response.send({ code: 400 });
+      }
+    })
+    .catch((err) => {
+      response.send({ code: 400 });
+    });
+});
+
+app.post("/updatepassword", async (request, response) => {
+  const { id, password } = request.body;
+  const salt = bcrypt.genSaltSync(10);
+  const hash = bcrypt.hashSync(password, salt);
+  await LoginModel.findOneAndUpdate(
+    { id: id }, 
+    { password: hash },
+    {new: true}
+  )
+  .then((res) => {
+    console.log(res)
+    response.send({message: "Password Successfully Updated"})
+  })
+  .catch((err) => {
+    response.send({message: "Password Not Updated"})
+  })
+
 });
