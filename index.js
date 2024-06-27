@@ -3,6 +3,7 @@ const cors = require("cors");
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const sendEmail = require("./utils/MailSender");
 
 const app = express();
 app.use(express.json());
@@ -19,6 +20,7 @@ const LoginModel = require("./models/LoginModel");
 const LeaveModel = require("./models/LeaveModel");
 const EmployeeModel = require("./models/EmployeeModel");
 const AttendanceModel = require("./models/AttendanceModel");
+const OTPModel = require("./models/OTPModel");
 
 mongoose
   .connect("mongodb://localhost:27017/attendance", {
@@ -379,19 +381,66 @@ app.post("/currentleavecount", async (request, response) => {
   }
 });
 
+const generateOTP = () => {
+  const otp = Math.floor(100000 + Math.random() * 900000);
+  return otp.toString().padStart(6, "0");
+};
+
 app.post("/checkuser", async (request, response) => {
-  const { id } = request.body;
-  await LoginModel.findOne({ id: id })
-    .then((res) => {
-      if (res != null) {
-        response.send({ code: 200 });
-      } else {
-        response.send({ code: 400 });
-      }
-    })
-    .catch((err) => {
-      response.send({ code: 400 });
+  try {
+    const { id } = request.body;
+    const loginUser = await LoginModel.findOne({ id });
+
+    if (!loginUser) {
+      return response.status(400).send({ code: 400 });
+    }
+
+    const employeeData = await EmployeeModel.findOne({ id });
+    const newOTP = generateOTP();
+
+    await OTPModel.findOneAndUpdate(
+      { userId: id },
+      { otp: newOTP },
+      { upsert: true, new: true }
+    );
+
+    await sendEmail({
+      toMail: employeeData.email,
+      otp: newOTP,
     });
+
+    response.status(200).send({ code: 200 });
+  } catch (error) {
+    console.error("Error in /checkuser:", error);
+    response.status(400).send({ code: 400 });
+  }
+});
+
+app.post("/verifyotp", async (request, response) => {
+  try {
+    const { id, otp } = request.body;
+
+    const otpRecord = await OTPModel.findOne({ userId: id });
+
+    if (!otpRecord) {
+      return response
+        .status(400)
+        .send({ code: 400, message: "No OTP found for this user" });
+    }
+
+    if (otp === otpRecord.otp) {
+      // OTP is valid
+      await OTPModel.deleteOne({ userId: id }); // Remove the OTP after successful verification
+      return response
+        .status(200)
+        .send({ code: 200, message: "OTP verified successfully" });
+    } else {
+      return response.status(200).send({ code: 400, message: "Invalid OTP" });
+    }
+  } catch (error) {
+    console.error("Error in /verifyotp:", error);
+    response.status(500).send({ code: 500, message: "Internal server error" });
+  }
 });
 
 app.post("/updatepassword", async (request, response) => {
@@ -399,16 +448,15 @@ app.post("/updatepassword", async (request, response) => {
   const salt = bcrypt.genSaltSync(10);
   const hash = bcrypt.hashSync(password, salt);
   await LoginModel.findOneAndUpdate(
-    { id: id }, 
+    { id: id },
     { password: hash },
-    {new: true}
+    { new: true }
   )
-  .then((res) => {
-    console.log(res)
-    response.send({message: "Password Successfully Updated"})
-  })
-  .catch((err) => {
-    response.send({message: "Password Not Updated"})
-  })
-
+    .then((res) => {
+      console.log(res);
+      response.send({ message: "Password Successfully Updated" });
+    })
+    .catch((err) => {
+      response.send({ message: "Password Not Updated" });
+    });
 });
