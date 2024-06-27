@@ -11,7 +11,9 @@ const leaveSchema = mongoose.Schema({
     todate: String,
     reason: String,
     status: String,
-    reportingperson: String
+    reportingperson: String,
+    leavepermitted: String,
+    leavetaken: String
 })
 
 const LeaveModel = mongoose.model('leaveForms', leaveSchema)

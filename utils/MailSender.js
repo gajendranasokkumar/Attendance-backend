@@ -45,7 +45,7 @@ async function sendEmail({toMail, otp}) {
             <h1>OTP for Changing the Password</h1>
             <p>Your 6-digit OTP for changing the password is:</p>
             <p class="otp">${otp}</p>
-            <p>Please use this OTP to complete your password change process.</p>
+            <p>Please use this OTP to complete your password changing process. This OTP is valid only for 5 mins</p>
             <p>If you didn't request this change, please ignore this email.</p>
           </div>
         </body>
