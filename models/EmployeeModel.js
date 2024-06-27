@@ -13,6 +13,7 @@ const employeeScheme = mongoose.Schema({
     hrpolicy: String,
     dateofjoining: String,
     punchid: String,
+    entrytime: String,
     company: String,
     branch: String,
     designation: String,
