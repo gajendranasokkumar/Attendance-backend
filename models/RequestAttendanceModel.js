@@ -8,6 +8,21 @@ const requestAttendanceSchema = mongoose.Schema({
     time: String,
     reason: String,
     status: String,
+    company: String,
+    person: String,
+    punchid: String,
+    branch: String,
+    designation: String,
+    multibranchattendance: String,
+    shiftgroup: String,
+    shift: String,
+    punchtype: String,
+    geolocation: String,
+    checkintime: String,
+    checkouttime: String,
+    location: String,
+    ischeckedin: Boolean,
+    ischeckedout: Boolean,
 })
 
 const RequestAttendanceModel = mongoose.model('attendancerequests', requestAttendanceSchema)

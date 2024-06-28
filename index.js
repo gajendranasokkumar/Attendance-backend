@@ -185,7 +185,7 @@ app.post("/punchcheckin", async (req, res) => {
       geolocation: employeeDetails.geolocation,
       checkintime: timeString,
       checkouttime: "",
-      location: employeeDetails.branch,
+      location: employeeDetails.location,
       date: formattedDate,
       ischeckedin: true,
       ischeckedout: false,
@@ -336,13 +336,16 @@ app.post("/updatepassword", async (request, response) => {
     });
 });
 
-
 app.post("/requestattendance", async (request, response) => {
   const requestDetails = request.body;
   await RequestAttendanceModel.create(requestDetails)
-  .then((res) => response.json(res))
-  .catch((err) => response.status(400).send("Request Failed")) 
-})
+    .then((res) => {
+      AttendanceModel.create(requestDetails)
+        .then((res) => response.json(res))
+        .catch((err) => response.status(400).send("Cannot Update Checkin"));
+    })
+    .catch((err) => response.status(400).send("Request Failed"));
+});
 
 app.get("/getrequestforms", (request, response) => {
   RequestAttendanceModel.find()
@@ -350,12 +353,20 @@ app.get("/getrequestforms", (request, response) => {
     .catch((err) => response.json(err));
 });
 
-app.post("/updateattendancerequest", (request, response) => {
+app.post("/updateattendancerequest", async (request, response) => {
   const { formId, currentStatus } = request.body;
 
-  RequestAttendanceModel.findByIdAndUpdate(formId, {
+  await RequestAttendanceModel.findByIdAndUpdate(formId, {
     status: currentStatus,
   })
-    .then((res) => response.json(res))
+    .then(async (res) => {
+      await AttendanceModel.findOneAndUpdate(
+        { id: res.id, date: res.date },
+        { checkintime: res.time, ischeckedin: true, status: currentStatus },
+        { new: true }
+      )
+        .then((res) => response.json(res))
+        .catch((err) => response.status(400).send("Cannot Update Checkout"));
+    })
     .catch((err) => response.status(400).send("Cannot Update Status"));
 });

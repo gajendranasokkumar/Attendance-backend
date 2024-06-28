@@ -5,6 +5,7 @@ const attendanceSchema = mongoose.Schema({
     name: String,
     person: String,
     punchid: String,
+    status: String,
     company: String,
     branch: String,
     designation: String,
