@@ -20,6 +20,7 @@ const attendanceSchema = mongoose.Schema({
     date: String,
     ischeckedin: Boolean,
     ischeckedout: Boolean,
+    remainingtime: String
 })
 
 const AttendanceModel = mongoose.model('attendances', attendanceSchema)

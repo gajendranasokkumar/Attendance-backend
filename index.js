@@ -125,17 +125,23 @@ app.post("/getCheckInDetails", (request, response) => {
 });
 
 app.post("/checkin", (request, response) => {
-  const checkINDetails = request.body;
-  AttendanceModel.create(checkINDetails)
+  const { id, date, ...checkINDetails } = request.body;
+  AttendanceModel.findOneAndUpdate(
+    { id: id, date: date },
+    // { ...checkINDetails, id, date }, 
+    { $set: checkINDetails },
+    { new: true, upsert: true } 
+  )
     .then((res) => response.json(res))
     .catch((err) => response.status(400).send("Cannot Update Checkin"));
 });
+
 
 app.post("/checkout", (request, response) => {
   const { id, date, checkouttime, ischeckedout } = request.body;
   AttendanceModel.findOneAndUpdate(
     { id: id, date: date },
-    { checkouttime: checkouttime, ischeckedout: ischeckedout },
+    { ...request.body },
     { new: true }
   )
     .then((res) => response.json(res))
@@ -356,17 +362,34 @@ app.get("/getrequestforms", (request, response) => {
 app.post("/updateattendancerequest", async (request, response) => {
   const { formId, currentStatus } = request.body;
 
-  await RequestAttendanceModel.findByIdAndUpdate(formId, {
-    status: currentStatus,
-  })
-    .then(async (res) => {
-      await AttendanceModel.findOneAndUpdate(
-        { id: res.id, date: res.date },
-        { checkintime: res.time, ischeckedin: true, status: currentStatus },
-        { new: true }
-      )
-        .then((res) => response.json(res))
-        .catch((err) => response.status(400).send("Cannot Update Checkout"));
+  if (currentStatus.toUpperCase() == "PERMITTED") {
+    await RequestAttendanceModel.findByIdAndUpdate(formId, {
+      status: currentStatus,
     })
-    .catch((err) => response.status(400).send("Cannot Update Status"));
+      .then(async (res) => {
+        await AttendanceModel.findOneAndUpdate(
+          { id: res.id, date: res.date },
+          { checkintime: res.time, ischeckedin: true, status: currentStatus },
+          { new: true }
+        )
+          .then((res) => response.json(res))
+          .catch((err) => response.status(400).send("Cannot Update Checkout"));
+      })
+      .catch((err) => response.status(400).send("Cannot Update Status"));
+  } else {
+    await RequestAttendanceModel.findByIdAndUpdate(formId, {
+      status: currentStatus,
+    })
+      .then(async (res) => {
+        await AttendanceModel.findOneAndUpdate(
+          { id: res.id, date: res.date },
+          { ischeckedin: false, status: currentStatus },
+          { new: true }
+        )
+          .then((res) => response.json(res))
+          .catch((err) => response.status(400).send("Cannot Update Checkout"));
+      })
+      .catch((err) => response.status(400).send("Cannot Update Status"));
+  }
 });
+
