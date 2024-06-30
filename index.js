@@ -124,29 +124,118 @@ app.post("/getCheckInDetails", (request, response) => {
     .catch((err) => response.status(400).send("Cannot Update Checkin"));
 });
 
+// app.post("/checkin", (request, response) => {
+//   const { id, date, ...checkINDetails } = request.body;
+//   AttendanceModel.findOneAndUpdate(
+//     { id: id, date: date },
+//     // { ...checkINDetails, id, date }, 
+//     { $set: checkINDetails },
+//     { new: true, upsert: true } 
+//   )
+//     .then((res) => response.json(res))
+//     .catch((err) => response.status(400).send("Cannot Update Checkin"));
+// });
+
+
+// app.post("/checkout", (request, response) => {
+//   const { id, date, checkouttime, ischeckedout } = request.body;
+//   AttendanceModel.findOneAndUpdate(
+//     { id: id, date: date },
+//     { ...request.body },
+//     { new: true }
+//   )
+//     .then((res) => response.json(res))
+//     .catch((err) => response.status(400).send("Cannot Update Checkout"));
+// });
+
+
 app.post("/checkin", (request, response) => {
-  const { id, date, ...checkINDetails } = request.body;
+  const { id, date, checkintime, checkouttime, ...checkINDetails } = request.body;
+  
+  // Prepare the update object
+  let updateObject = { 
+    $push: { checkintime: checkintime },
+    $set: { 
+      ...checkINDetails, 
+      ischeckedin: true, 
+      ischeckedout: false 
+    }
+  };
+
+  // Only push to checkouttime if it's not an empty string
+  if (checkouttime && checkouttime !== '') {
+    updateObject.$push.checkouttime = checkouttime;
+  }
+
   AttendanceModel.findOneAndUpdate(
     { id: id, date: date },
-    // { ...checkINDetails, id, date }, 
-    { $set: checkINDetails },
+    updateObject,
     { new: true, upsert: true } 
   )
     .then((res) => response.json(res))
     .catch((err) => response.status(400).send("Cannot Update Checkin"));
 });
 
-
 app.post("/checkout", (request, response) => {
-  const { id, date, checkouttime, ischeckedout } = request.body;
+  const { id, date, checkouttime } = request.body;
+  console.log(checkouttime)
   AttendanceModel.findOneAndUpdate(
     { id: id, date: date },
-    { ...request.body },
+    { 
+      $push: { checkouttime: checkouttime },
+      $set: { 
+        ischeckedout: true, 
+        ischeckedin: false
+      }
+    },
     { new: true }
   )
-    .then((res) => response.json(res))
+    .then((res) => {
+      // Calculate total worked time
+      const totalWorkedTime = calculateTotalWorkedTime(res.checkintime, res.checkouttime);
+      
+      // Update total worked time
+      return AttendanceModel.findOneAndUpdate(
+        { id: id, date: date },
+        { $set: { totalWorkedTime: totalWorkedTime } },
+        { new: true }
+      );
+    })
+    .then((updatedRes) => response.json(updatedRes))
     .catch((err) => response.status(400).send("Cannot Update Checkout"));
 });
+
+function calculateTotalWorkedTime(checkinTimes, checkoutTimes) {
+  let totalSeconds = 0;
+  const minLength = Math.min(checkinTimes.length, checkoutTimes.length);
+  
+  for (let i = 0; i < minLength; i++) {
+    if (checkinTimes[i] && checkoutTimes[i+1]) {
+      const checkinSeconds = timeToSeconds(checkinTimes[i]);
+      const checkoutSeconds = timeToSeconds(checkoutTimes[i+1]);
+      totalSeconds += checkoutSeconds - checkinSeconds;
+    }
+  }
+  
+  return totalSeconds;
+}
+
+function timeToSeconds(timeString) {
+  if (!timeString) return 0;
+  const [hours, minutes, seconds] = timeString.split(':').map(Number);
+  return hours * 3600 + minutes * 60 + seconds;
+}
+
+
+
+
+
+
+
+
+
+
+
 
 app.post("/getAttendanceHistory", (request, response) => {
   const { id } = request.body;

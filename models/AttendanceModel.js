@@ -14,13 +14,13 @@ const attendanceSchema = mongoose.Schema({
     shift: String,
     punchtype: String,
     geolocation: String,
-    checkintime: String,
-    checkouttime: String,
+    checkintime: [String],
+    checkouttime: [String],
     location: String,
     date: String,
     ischeckedin: Boolean,
     ischeckedout: Boolean,
-    remainingtime: String
+    totalWorkedTime: String
 })
 
 const AttendanceModel = mongoose.model('attendances', attendanceSchema)
