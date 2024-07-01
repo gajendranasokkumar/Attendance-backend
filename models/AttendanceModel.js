@@ -20,7 +20,8 @@ const attendanceSchema = mongoose.Schema({
     date: String,
     ischeckedin: Boolean,
     ischeckedout: Boolean,
-    totalWorkedTime: String
+    totalWorkedTime: String,
+    hoursofwork: String
 })
 
 const AttendanceModel = mongoose.model('attendances', attendanceSchema)
