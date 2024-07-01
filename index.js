@@ -152,7 +152,6 @@ app.post("/getCheckInDetails", (request, response) => {
 app.post("/checkin", (request, response) => {
   const { id, date, checkintime, checkouttime, ...checkINDetails } = request.body;
   
-  // Prepare the update object
   let updateObject = { 
     $push: { checkintime: checkintime },
     $set: { 
@@ -162,7 +161,6 @@ app.post("/checkin", (request, response) => {
     }
   };
 
-  // Only push to checkouttime if it's not an empty string
   if (checkouttime && checkouttime !== '') {
     updateObject.$push.checkouttime = checkouttime;
   }
@@ -178,7 +176,6 @@ app.post("/checkin", (request, response) => {
 
 app.post("/checkout", (request, response) => {
   const { id, date, checkouttime } = request.body;
-  console.log(checkouttime)
   AttendanceModel.findOneAndUpdate(
     { id: id, date: date },
     { 
@@ -191,13 +188,11 @@ app.post("/checkout", (request, response) => {
     { new: true }
   )
     .then((res) => {
-      // Calculate total worked time
       const totalWorkedTime = calculateTotalWorkedTime(res.checkintime, res.checkouttime);
       
-      // Update total worked time
       return AttendanceModel.findOneAndUpdate(
         { id: id, date: date },
-        { $set: { totalWorkedTime: totalWorkedTime } },
+        { $set: { totalWorkedTime: secondsToTimeString(totalWorkedTime) } },
         { new: true }
       );
     })
@@ -210,14 +205,21 @@ function calculateTotalWorkedTime(checkinTimes, checkoutTimes) {
   const minLength = Math.min(checkinTimes.length, checkoutTimes.length);
   
   for (let i = 0; i < minLength; i++) {
-    if (checkinTimes[i] && checkoutTimes[i+1]) {
+    if (checkinTimes[i] && checkoutTimes[i]) {
       const checkinSeconds = timeToSeconds(checkinTimes[i]);
-      const checkoutSeconds = timeToSeconds(checkoutTimes[i+1]);
+      const checkoutSeconds = timeToSeconds(checkoutTimes[i]);
       totalSeconds += checkoutSeconds - checkinSeconds;
     }
   }
   
   return totalSeconds;
+}
+
+function secondsToTimeString(seconds) {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remainingSeconds = seconds % 60;
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
 }
 
 function timeToSeconds(timeString) {
@@ -228,21 +230,87 @@ function timeToSeconds(timeString) {
 
 
 
-
-
-
-
-
-
-
-
-
 app.post("/getAttendanceHistory", (request, response) => {
   const { id } = request.body;
   AttendanceModel.find({ id: id })
     .then((res) => response.json(res))
     .catch((err) => response.status(400).send("Cannot Update Checkin"));
 });
+
+// app.post("/punchcheckin", async (req, res) => {
+//   try {
+//     const { punchid } = req.body;
+//     const employeeDetails = await EmployeeModel.findOne({ punchid });
+//     if (!employeeDetails) {
+//       return res.status(404).send("Employee not found");
+//     }
+
+//     const now = new Date();
+//     const formattedDate = now.toLocaleDateString("en-GB").split("/").join("-");
+
+//     const existingAttendance = await AttendanceModel.findOne({
+//       punchid,
+//       date: formattedDate,
+//     });
+//     if (existingAttendance) {
+//       return res.status(200).send("Already Checked In");
+//     }
+
+//     const timeString = now.toTimeString().split(" ")[0];
+
+//     const attendanceObj = {
+//       id: employeeDetails.id,
+//       name: employeeDetails.name,
+//       person: employeeDetails.person,
+//       punchid: employeeDetails.punchid,
+//       company: employeeDetails.company,
+//       branch: employeeDetails.branch,
+//       designation: employeeDetails.designation,
+//       multibranchattendance: employeeDetails.multibranchattendance,
+//       shiftgroup: employeeDetails.shiftgroup,
+//       shift: employeeDetails.shift,
+//       punchtype: employeeDetails.punchtype,
+//       geolocation: employeeDetails.geolocation,
+//       checkintime: timeString,
+//       checkouttime: "",
+//       location: employeeDetails.location,
+//       date: formattedDate,
+//       ischeckedin: true,
+//       ischeckedout: false,
+//     };
+
+//     const result = await AttendanceModel.create(attendanceObj);
+//     res.json(result);
+//   } catch (err) {
+//     res.status(500).send("Cannot Update Checkin");
+//   }
+// });
+
+// app.post("/punchcheckout", async (request, response) => {
+//   const { punchid } = request.body;
+
+//   const now = new Date();
+//   const formattedDate = now.toLocaleDateString("en-GB").split("/").join("-");
+//   const timeString = now.toTimeString().split(" ")[0];
+
+//   const existingAttendance = await AttendanceModel.findOne({
+//     punchid,
+//     date: formattedDate,
+//   });
+//   if (existingAttendance.ischeckedout) {
+//     return response.status(200).send("Already Checked Out");
+//   }
+
+//   AttendanceModel.findOneAndUpdate(
+//     { punchid: punchid, date: formattedDate },
+//     { checkouttime: timeString, ischeckedout: true },
+//     { new: true }
+//   )
+//     .then((res) => response.json(res))
+//     .catch((err) => response.status(400).send("Cannot Update Checkout"));
+// });
+
+
 
 app.post("/punchcheckin", async (req, res) => {
   try {
@@ -254,39 +322,45 @@ app.post("/punchcheckin", async (req, res) => {
 
     const now = new Date();
     const formattedDate = now.toLocaleDateString("en-GB").split("/").join("-");
+    const timeString = now.toTimeString().split(" ")[0];
 
     const existingAttendance = await AttendanceModel.findOne({
       punchid,
       date: formattedDate,
     });
-    if (existingAttendance) {
+
+    if (existingAttendance && existingAttendance.ischeckedin) {
       return res.status(200).send("Already Checked In");
     }
 
-    const timeString = now.toTimeString().split(" ")[0];
-
-    const attendanceObj = {
-      id: employeeDetails.id,
-      name: employeeDetails.name,
-      person: employeeDetails.person,
-      punchid: employeeDetails.punchid,
-      company: employeeDetails.company,
-      branch: employeeDetails.branch,
-      designation: employeeDetails.designation,
-      multibranchattendance: employeeDetails.multibranchattendance,
-      shiftgroup: employeeDetails.shiftgroup,
-      shift: employeeDetails.shift,
-      punchtype: employeeDetails.punchtype,
-      geolocation: employeeDetails.geolocation,
-      checkintime: timeString,
-      checkouttime: "",
-      location: employeeDetails.location,
-      date: formattedDate,
-      ischeckedin: true,
-      ischeckedout: false,
+    const updateObject = {
+      $push: { checkintime: timeString },
+      $set: {
+        id: employeeDetails.id,
+        name: employeeDetails.name,
+        person: employeeDetails.person,
+        punchid: employeeDetails.punchid,
+        company: employeeDetails.company,
+        branch: employeeDetails.branch,
+        designation: employeeDetails.designation,
+        multibranchattendance: employeeDetails.multibranchattendance,
+        shiftgroup: employeeDetails.shiftgroup,
+        shift: employeeDetails.shift,
+        punchtype: employeeDetails.punchtype,
+        geolocation: employeeDetails.geolocation,
+        location: employeeDetails.location,
+        date: formattedDate,
+        ischeckedin: true,
+        ischeckedout: false
+      }
     };
 
-    const result = await AttendanceModel.create(attendanceObj);
+    const result = await AttendanceModel.findOneAndUpdate(
+      { punchid, date: formattedDate },
+      updateObject,
+      { new: true, upsert: true }
+    );
+
     res.json(result);
   } catch (err) {
     res.status(500).send("Cannot Update Checkin");
@@ -294,28 +368,58 @@ app.post("/punchcheckin", async (req, res) => {
 });
 
 app.post("/punchcheckout", async (request, response) => {
-  const { punchid } = request.body;
+  try {
+    const { punchid } = request.body;
 
-  const now = new Date();
-  const formattedDate = now.toLocaleDateString("en-GB").split("/").join("-");
-  const timeString = now.toTimeString().split(" ")[0];
+    const now = new Date();
+    const formattedDate = now.toLocaleDateString("en-GB").split("/").join("-");
+    const timeString = now.toTimeString().split(" ")[0];
 
-  const existingAttendance = await AttendanceModel.findOne({
-    punchid,
-    date: formattedDate,
-  });
-  if (existingAttendance.ischeckedout) {
-    return response.status(200).send("Already Checked Out");
+    const existingAttendance = await AttendanceModel.findOne({
+      punchid,
+      date: formattedDate,
+    });
+    
+    if (!existingAttendance) {
+      return response.status(404).send("No check-in record found");
+    }
+
+    if (existingAttendance.ischeckedout) {
+      return response.status(200).send("Already Checked Out");
+    }
+
+    const updatedAttendance = await AttendanceModel.findOneAndUpdate(
+      { punchid: punchid, date: formattedDate, ischeckedout: false },
+      {
+        $push: { checkouttime: timeString },
+        $set: {
+          ischeckedout: true,
+          ischeckedin: false
+        }
+      },
+      { new: true }
+    );
+
+    if (!updatedAttendance) {
+      return response.status(400).send("Cannot update checkout. Employee might not be checked in.");
+    }
+
+    const totalWorkedTime = calculateTotalWorkedTime(updatedAttendance.checkintime, updatedAttendance.checkouttime);
+
+    const finalResult = await AttendanceModel.findOneAndUpdate(
+      { punchid: punchid, date: formattedDate },
+      { $set: { totalWorkedTime: secondsToTimeString(totalWorkedTime) } },
+      { new: true }
+    );
+
+    response.json(finalResult);
+  } catch (err) {
+    response.status(500).send("Cannot Update Checkout");
   }
-
-  AttendanceModel.findOneAndUpdate(
-    { punchid: punchid, date: formattedDate },
-    { checkouttime: timeString, ischeckedout: true },
-    { new: true }
-  )
-    .then((res) => response.json(res))
-    .catch((err) => response.status(400).send("Cannot Update Checkout"));
 });
+
+
+
 
 app.post("/currentleavecount", async (request, response) => {
   const { id } = request.body;
