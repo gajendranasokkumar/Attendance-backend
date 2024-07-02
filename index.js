@@ -117,6 +117,33 @@ app.post("/addemployee", (request, response) => {
     .catch((err) => response.status(400).send("Cannot Create Employee"));
 });
 
+app.post("/updateEmployee", async (request, response) => {
+  const { id, ...updateemp } = request.body;
+  await EmployeeModel.findOneAndUpdate(
+    {id: id},
+    updateemp, 
+    {new : true}
+  )
+  .then((res) => response.send(res))
+  .catch((err) => response.send(err))
+})
+
+app.delete('/deleteEmployee/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const deletedEmployee = await EmployeeModel.findByIdAndDelete(id);
+    
+    if (!deletedEmployee) {
+      return res.status(404).json({ message: 'Employee not found' });
+    }
+    
+    res.json({ message: 'Employee deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 app.post("/getCheckInDetails", (request, response) => {
   const { id, date } = request.body;
   AttendanceModel.findOne({ id: id, date: date })
@@ -586,3 +613,8 @@ app.post("/updateattendancerequest", async (request, response) => {
   }
 });
 
+app.get("/getAllEmployees", (request, response) => {
+  EmployeeModel.find()
+  .then((res) => response.send(res))
+  .catch((err) => response.send(err))
+})
