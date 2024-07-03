@@ -37,6 +37,9 @@ app.listen(3000, () => {
   console.log("Server is Running....port : 3000");
 });
 
+app.get("/", (req, res)=>{
+  res.send("Hello world");
+})
 
 app.post("/", async (req, res) => {
   console.log(req.body);
