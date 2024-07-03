@@ -9,7 +9,7 @@ const app = express();
 app.use(express.json());
 
 const corsOptions = {
-  origin: ["https://attendance-frontend-iota.vercel.app/"],
+  origin: "https://attendance-frontend-iota.vercel.app/",
   credentials: true,
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
 };
