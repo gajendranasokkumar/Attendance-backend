@@ -22,10 +22,10 @@ app.use(cors(corsOptions));
 //   next();
 // });
 
-app.use((req, res, next) => {
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization");
-  next();
-});
+// app.use((req, res, next) => {
+//   res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization");
+//   next();
+// });
 
 const LoginModel = require("./models/LoginModel");
 const LeaveModel = require("./models/LeaveModel");
