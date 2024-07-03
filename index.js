@@ -16,6 +16,11 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
+app.use((req, res, next) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  next();
+});
+
 const LoginModel = require("./models/LoginModel");
 const LeaveModel = require("./models/LeaveModel");
 const EmployeeModel = require("./models/EmployeeModel");
@@ -25,11 +30,14 @@ const RequestAttendanceModel = require("./models/RequestAttendanceModel");
 
 mongoose
   // .connect("mongodb://localhost:27017/attendance", {
-    .connect("mongodb+srv://gajendran:Gajendran_04@cluster0.lo3mjnl.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0", {
-    // .connect("mongodb+srv://imaigen_gajju:gajju@cluster0.fdhordh.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0", {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
+  .connect(
+    "mongodb+srv://gajendran:Gajendran_04@cluster0.lo3mjnl.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0",
+    {
+      // .connect("mongodb+srv://imaigen_gajju:gajju@cluster0.fdhordh.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0", {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    }
+  )
   .then(() => console.log("MongoDB connected"))
   .catch((err) => console.error("MongoDB connection error:", err));
 
@@ -37,9 +45,9 @@ app.listen(3000, () => {
   console.log("Server is Running....port : 3000");
 });
 
-app.get("/", (req, res)=>{
+app.get("/", (req, res) => {
   res.send("Hello world");
-})
+});
 
 app.post("/", async (req, res) => {
   console.log(req.body);
@@ -125,26 +133,22 @@ app.post("/addemployee", (request, response) => {
 
 app.post("/updateEmployee", async (request, response) => {
   const { id, ...updateemp } = request.body;
-  await EmployeeModel.findOneAndUpdate(
-    {id: id},
-    updateemp, 
-    {new : true}
-  )
-  .then((res) => response.send(res))
-  .catch((err) => response.send(err))
-})
+  await EmployeeModel.findOneAndUpdate({ id: id }, updateemp, { new: true })
+    .then((res) => response.send(res))
+    .catch((err) => response.send(err));
+});
 
-app.delete('/deleteEmployee/:id', async (req, res) => {
+app.delete("/deleteEmployee/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     const deletedEmployee = await EmployeeModel.findByIdAndDelete(id);
-    
+
     if (!deletedEmployee) {
-      return res.status(404).json({ message: 'Employee not found' });
+      return res.status(404).json({ message: "Employee not found" });
     }
-    
-    res.json({ message: 'Employee deleted successfully' });
+
+    res.json({ message: "Employee deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -161,14 +165,13 @@ app.post("/getCheckInDetails", (request, response) => {
 //   const { id, date, ...checkINDetails } = request.body;
 //   AttendanceModel.findOneAndUpdate(
 //     { id: id, date: date },
-//     // { ...checkINDetails, id, date }, 
+//     // { ...checkINDetails, id, date },
 //     { $set: checkINDetails },
-//     { new: true, upsert: true } 
+//     { new: true, upsert: true }
 //   )
 //     .then((res) => response.json(res))
 //     .catch((err) => response.status(400).send("Cannot Update Checkin"));
 // });
-
 
 // app.post("/checkout", (request, response) => {
 //   const { id, date, checkouttime, ischeckedout } = request.body;
@@ -181,28 +184,27 @@ app.post("/getCheckInDetails", (request, response) => {
 //     .catch((err) => response.status(400).send("Cannot Update Checkout"));
 // });
 
-
 app.post("/checkin", (request, response) => {
-  const { id, date, checkintime, checkouttime, ...checkINDetails } = request.body;
-  
-  let updateObject = { 
+  const { id, date, checkintime, checkouttime, ...checkINDetails } =
+    request.body;
+
+  let updateObject = {
     $push: { checkintime: checkintime },
-    $set: { 
-      ...checkINDetails, 
-      ischeckedin: true, 
-      ischeckedout: false 
-    }
+    $set: {
+      ...checkINDetails,
+      ischeckedin: true,
+      ischeckedout: false,
+    },
   };
 
-  if (checkouttime && checkouttime !== '') {
+  if (checkouttime && checkouttime !== "") {
     updateObject.$push.checkouttime = checkouttime;
   }
 
-  AttendanceModel.findOneAndUpdate(
-    { id: id, date: date },
-    updateObject,
-    { new: true, upsert: true } 
-  )
+  AttendanceModel.findOneAndUpdate({ id: id, date: date }, updateObject, {
+    new: true,
+    upsert: true,
+  })
     .then((res) => response.json(res))
     .catch((err) => response.status(400).send("Cannot Update Checkin"));
 });
@@ -211,18 +213,21 @@ app.post("/checkout", (request, response) => {
   const { id, date, checkouttime } = request.body;
   AttendanceModel.findOneAndUpdate(
     { id: id, date: date },
-    { 
+    {
       $push: { checkouttime: checkouttime },
-      $set: { 
-        ischeckedout: true, 
-        ischeckedin: false
-      }
+      $set: {
+        ischeckedout: true,
+        ischeckedin: false,
+      },
     },
     { new: true }
   )
     .then((res) => {
-      const totalWorkedTime = calculateTotalWorkedTime(res.checkintime, res.checkouttime);
-      
+      const totalWorkedTime = calculateTotalWorkedTime(
+        res.checkintime,
+        res.checkouttime
+      );
+
       return AttendanceModel.findOneAndUpdate(
         { id: id, date: date },
         { $set: { totalWorkedTime: secondsToTimeString(totalWorkedTime) } },
@@ -236,7 +241,7 @@ app.post("/checkout", (request, response) => {
 function calculateTotalWorkedTime(checkinTimes, checkoutTimes) {
   let totalSeconds = 0;
   const minLength = Math.min(checkinTimes.length, checkoutTimes.length);
-  
+
   for (let i = 0; i < minLength; i++) {
     if (checkinTimes[i] && checkoutTimes[i]) {
       const checkinSeconds = timeToSeconds(checkinTimes[i]);
@@ -244,7 +249,7 @@ function calculateTotalWorkedTime(checkinTimes, checkoutTimes) {
       totalSeconds += checkoutSeconds - checkinSeconds;
     }
   }
-  
+
   return totalSeconds;
 }
 
@@ -252,16 +257,17 @@ function secondsToTimeString(seconds) {
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
   const remainingSeconds = seconds % 60;
-  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(
+    2,
+    "0"
+  )}:${String(remainingSeconds).padStart(2, "0")}`;
 }
 
 function timeToSeconds(timeString) {
   if (!timeString) return 0;
-  const [hours, minutes, seconds] = timeString.split(':').map(Number);
+  const [hours, minutes, seconds] = timeString.split(":").map(Number);
   return hours * 3600 + minutes * 60 + seconds;
 }
-
-
 
 app.post("/getAttendanceHistory", (request, response) => {
   const { id } = request.body;
@@ -343,8 +349,6 @@ app.post("/getAttendanceHistory", (request, response) => {
 //     .catch((err) => response.status(400).send("Cannot Update Checkout"));
 // });
 
-
-
 app.post("/punchcheckin", async (req, res) => {
   try {
     const { punchid } = req.body;
@@ -384,8 +388,8 @@ app.post("/punchcheckin", async (req, res) => {
         location: employeeDetails.location,
         date: formattedDate,
         ischeckedin: true,
-        ischeckedout: false
-      }
+        ischeckedout: false,
+      },
     };
 
     const result = await AttendanceModel.findOneAndUpdate(
@@ -412,7 +416,7 @@ app.post("/punchcheckout", async (request, response) => {
       punchid,
       date: formattedDate,
     });
-    
+
     if (!existingAttendance) {
       return response.status(404).send("No check-in record found");
     }
@@ -427,17 +431,22 @@ app.post("/punchcheckout", async (request, response) => {
         $push: { checkouttime: timeString },
         $set: {
           ischeckedout: true,
-          ischeckedin: false
-        }
+          ischeckedin: false,
+        },
       },
       { new: true }
     );
 
     if (!updatedAttendance) {
-      return response.status(400).send("Cannot update checkout. Employee might not be checked in.");
+      return response
+        .status(400)
+        .send("Cannot update checkout. Employee might not be checked in.");
     }
 
-    const totalWorkedTime = calculateTotalWorkedTime(updatedAttendance.checkintime, updatedAttendance.checkouttime);
+    const totalWorkedTime = calculateTotalWorkedTime(
+      updatedAttendance.checkintime,
+      updatedAttendance.checkouttime
+    );
 
     const finalResult = await AttendanceModel.findOneAndUpdate(
       { punchid: punchid, date: formattedDate },
@@ -450,9 +459,6 @@ app.post("/punchcheckout", async (request, response) => {
     response.status(500).send("Cannot Update Checkout");
   }
 });
-
-
-
 
 app.post("/currentleavecount", async (request, response) => {
   const { id } = request.body;
@@ -621,6 +627,6 @@ app.post("/updateattendancerequest", async (request, response) => {
 
 app.get("/getAllEmployees", (request, response) => {
   EmployeeModel.find()
-  .then((res) => response.send(res))
-  .catch((err) => response.send(err))
-})
+    .then((res) => response.send(res))
+    .catch((err) => response.send(err));
+});
