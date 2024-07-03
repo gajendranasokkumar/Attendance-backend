@@ -25,6 +25,7 @@ const RequestAttendanceModel = require("./models/RequestAttendanceModel");
 
 mongoose
   .connect("mongodb://localhost:27017/attendance", {
+    // .connect("mongodb+srv://imaigen_gajju:gajju@cluster0.fdhordh.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0", {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   })
@@ -34,6 +35,7 @@ mongoose
 app.listen(3000, () => {
   console.log("Server is Running....port : 3000");
 });
+
 
 app.post("/", async (req, res) => {
   console.log(req.body);
