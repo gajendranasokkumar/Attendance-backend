@@ -10,7 +10,7 @@ app.use(express.json());
 
 const corsOptions = {
   origin: "https://attendance-frontend-iota.vercel.app/",
-  credentials: true,
+  // credentials: true,
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
   allowedHeaders: ["Content-Type", "Authorization"]
 };
