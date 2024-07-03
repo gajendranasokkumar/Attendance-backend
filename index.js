@@ -24,7 +24,8 @@ const OTPModel = require("./models/OTPModel");
 const RequestAttendanceModel = require("./models/RequestAttendanceModel");
 
 mongoose
-  .connect("mongodb://localhost:27017/attendance", {
+  // .connect("mongodb://localhost:27017/attendance", {
+    .connect("mongodb+srv://gajendran:Gajendran_04@cluster0.lo3mjnl.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0", {
     // .connect("mongodb+srv://imaigen_gajju:gajju@cluster0.fdhordh.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0", {
     useNewUrlParser: true,
     useUnifiedTopology: true,
