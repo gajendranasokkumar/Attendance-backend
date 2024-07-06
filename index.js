@@ -46,8 +46,8 @@ const OTPModel = require("./models/OTPModel");
 const RequestAttendanceModel = require("./models/RequestAttendanceModel");
 
 mongoose
-  // .connect("mongodb://localhost:27017/attendance", {
-  .connect("mongodb+srv://gajendran:Gajendran_04@cluster0.lo3mjnl.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0",{
+  .connect("mongodb://localhost:27017/attendance", {
+  // .connect("mongodb+srv://gajendran:Gajendran_04@cluster0.lo3mjnl.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0",{
       // .connect("mongodb+srv://imaigen_gajju:gajju@cluster0.fdhordh.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0", {
       useNewUrlParser: true,
       useUnifiedTopology: true,
@@ -128,30 +128,94 @@ app.post("/updateleave", (request, response) => {
     .catch((err) => response.status(400).send("Cannot Update Status"));
 });
 
-app.post("/addemployee", (request, response) => {
+// app.post("/addemployee", (request, response) => {
+//   const employeeDetails = request.body;
+//   console.log(employeeDetails);
+//   EmployeeModel.create(employeeDetails)
+//     .then((res) => {
+//       const salt = bcrypt.genSaltSync(10);
+//       const hash = bcrypt.hashSync(employeeDetails.id, salt);
+//       LoginModel.create({
+//         user: "Employee",
+//         id: employeeDetails.id,
+//         password: hash,
+//       })
+//         .then((res) => response.json(res))
+//         .catch((err) => response.json(err));
+//     })
+//     .catch((err) => response.status(400).send("Cannot Create Employee"));
+// });
+
+
+
+app.post("/addemployee", async (request, response) => {
   const employeeDetails = request.body;
   console.log(employeeDetails);
-  EmployeeModel.create(employeeDetails)
-    .then((res) => {
-      const salt = bcrypt.genSaltSync(10);
-      const hash = bcrypt.hashSync(employeeDetails.id, salt);
-      LoginModel.create({
-        user: "Employee",
-        id: employeeDetails.id,
-        password: hash,
-      })
-        .then((res) => response.json(res))
-        .catch((err) => response.json(err));
-    })
-    .catch((err) => response.status(400).send("Cannot Create Employee"));
+
+  try {
+    const newEmployee = await EmployeeModel.create(employeeDetails);
+
+    const salt = bcrypt.genSaltSync(10);
+    const hash = bcrypt.hashSync(employeeDetails.id, salt);
+
+    await LoginModel.create({
+      user: "Employee",
+      id: employeeDetails.id,
+      password: hash,
+    });
+
+    if (employeeDetails.reportingperson) {
+      await EmployeeModel.findOneAndUpdate(
+        {id : employeeDetails.reportingperson},
+        { $push: { employeelist: newEmployee.id } }
+      );
+    }
+
+    response.status(201).json(newEmployee);
+  } catch (err) {
+    console.error("Error creating employee:", err);
+    response.status(400).json({ error: "Cannot Create Employee", details: err.message });
+  }
 });
+
 
 app.post("/updateEmployee", async (request, response) => {
   const { id, ...updateemp } = request.body;
-  await EmployeeModel.findOneAndUpdate({ id: id }, updateemp, { new: true })
-    .then((res) => response.send(res))
-    .catch((err) => response.send(err));
+
+  try {
+    const currentEmployee = await EmployeeModel.findOne({ id: id });
+
+    if (!currentEmployee) {
+      return response.status(404).send({ message: "Employee not found" });
+    }
+
+    if (updateemp.reportingperson && updateemp.reportingperson !== currentEmployee.reportingperson) {
+      if (currentEmployee.reportingperson) {
+        await EmployeeModel.findOneAndUpdate(
+          { id: currentEmployee.reportingperson },
+          { $pull: { employeelist: id } }
+        );
+      }
+
+      await EmployeeModel.findOneAndUpdate(
+        { id: updateemp.reportingperson },
+        { $push: { employeelist: id } }
+      );
+    }
+
+    const updatedEmployee = await EmployeeModel.findOneAndUpdate(
+      { id: id },
+      updateemp,
+      { new: true }
+    );
+
+    response.send(updatedEmployee);
+  } catch (err) {
+    response.status(500).send(err);
+  }
 });
+
+
 
 app.delete("/deleteEmployee/:id", async (req, res) => {
   try {
@@ -644,4 +708,18 @@ app.get("/getAllEmployees", (request, response) => {
   EmployeeModel.find()
     .then((res) => response.send(res))
     .catch((err) => response.send(err));
+});
+
+app.get("/fetchmanager", (request, response) => {
+  EmployeeModel.find({ismanager: "Yes"})
+  .then((res) => response.send(res))
+  .catch((err) => response.send(err))
+})
+
+app.post("/getEmpListForManager", (request, response) => {
+  const idArray = Array.isArray(request.body) ? request.body : [request.body];
+
+  EmployeeModel.find({ id: { $in: idArray } })
+    .then((employees) => response.send(employees))
+    .catch((err) => response.status(500).send(err));
 });

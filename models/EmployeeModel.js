@@ -28,7 +28,9 @@ const employeeScheme = mongoose.Schema({
     geolocation: String,
     leavetaken: Number,
     leavepermitted: Number,
-    hoursofwork: Number
+    hoursofwork: Number,
+    ismanager: String,
+    employeelist: [String]
 })
 
 const EmployeeModel = mongoose.model('employees', employeeScheme)
