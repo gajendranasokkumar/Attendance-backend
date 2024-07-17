@@ -723,3 +723,117 @@ app.post("/getEmpListForManager", (request, response) => {
     .then((employees) => response.send(employees))
     .catch((err) => response.status(500).send(err));
 });
+
+
+app.post('/uploadexcel', async (req, response) => {
+  const employeeDetails = req.body;
+
+  const newEmployeeDetails = {
+    id: employeeDetails.id ? String(employeeDetails.id) : '',
+    name: employeeDetails.name || '',
+    email: employeeDetails.email || '',
+    person: employeeDetails.person || '',
+    phonenumber: employeeDetails.phonenumber || '',
+    dob: employeeDetails.dob || '',
+    address: employeeDetails.address || '',
+    gender: employeeDetails.gender || '',
+    maritalstatus: employeeDetails.maritalstatus || '',
+    hrpolicy: employeeDetails.hrpolicy || '',
+    dateofjoining: employeeDetails.dateofjoining || '',
+    punchid: employeeDetails.punchid || '',
+    entrytime: employeeDetails.entrytime || '',
+    company: employeeDetails.company || '',
+    branch: employeeDetails.branch || '',
+    designation: employeeDetails.designation || '',
+    mobilenumber: employeeDetails.mobilenumber || '',
+    reportingperson: employeeDetails.reportingperson || '',
+    department: employeeDetails.department || '',
+    role: employeeDetails.role || '',
+    multibranchattendance: employeeDetails.multibranchattendance || '',
+    shiftgroup: employeeDetails.shiftgroup || '',
+    shift: employeeDetails.shift || '',
+    punchtype: employeeDetails.punchtype || '',
+    geolocation: employeeDetails.geolocation || '',
+    leavetaken: parseInt(employeeDetails.leavetaken) || 0,
+    leavepermitted: parseInt(employeeDetails.leavepermitted) || 0,
+    hoursofwork: parseInt(employeeDetails.hoursofwork) || 0,
+    ismanager: employeeDetails.ismanager || '',
+    employeelist: employeeDetails.employeelist || [],
+    entrytime: String(employeeDetails.entrytime) || '',
+  };
+
+  console.log(newEmployeeDetails)
+
+  try {
+    const newEmployee = await EmployeeModel.create(newEmployeeDetails);
+
+    const salt = bcrypt.genSaltSync(10);
+    const hash = bcrypt.hashSync(String(employeeDetails.id), salt);
+
+    const respo = await LoginModel.create({
+      user: "Employee",
+      id: String(employeeDetails.id),
+      password: hash,
+    });
+
+    console.log(respo)
+
+    if (employeeDetails.reportingperson) {
+      await EmployeeModel.findOneAndUpdate(
+        { id: employeeDetails.reportingperson },
+        { $push: { employeelist: newEmployee.id } }
+      );
+    }
+
+    response.status(200).json({ message: 'Row data received and processed successfully' });
+  } catch (err) {
+    console.error("Error creating employee:", err);
+    response.status(400).json({ error: "Cannot Create Employee", details: err.message });
+  }
+});
+
+app.get('/getOptionsDetails', async (request, response) => {
+  try {
+    const today = new Date();
+    const day = String(today.getDate()).padStart(2, '0');
+    const month = String(today.getMonth() + 1).padStart(2, '0'); // Months are 0-based
+    const year = today.getFullYear();
+    const todayFormatted = `${day}-${month}-${year}`;
+    const todayMonthDay = `${month}-${day}`;
+
+    const strength = await EmployeeModel.countDocuments();
+
+    const birthday = await EmployeeModel.countDocuments({
+      $expr: {
+        $and: [
+          { $eq: [{ $substr: ["$dob", 5, 5] }, todayMonthDay] } 
+        ]
+      }
+    });
+
+    const atwork = await AttendanceModel.countDocuments({ 
+      date: todayFormatted,
+      $or: [
+        { $expr: { $gt: [{ $size: "$checkintime" }, 0] } }, 
+        { checkintime: { $type: "string" } }
+      ]
+    });        
+
+    const latein = await AttendanceModel.countDocuments({
+      date: todayFormatted,
+      $expr: {
+        $and: [
+          { $gt: [{ $size: "$checkintime" }, 0] },
+          { $gt: [{ $arrayElemAt: ["$checkintime", 0] }, "$entrytime"] }
+        ]
+      }
+    });
+
+    // const earlyout = await EmployeeModel.countDocuments({ status: 'earlyout' });
+
+    response.json({ strength, birthday, atwork, latein });
+  } catch (error) {
+    console.error('Error occurred:', error);
+    response.status(500).json({ error: 'Something went wrong' });
+  }
+});

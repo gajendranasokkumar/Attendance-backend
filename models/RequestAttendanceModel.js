@@ -23,6 +23,7 @@ const requestAttendanceSchema = mongoose.Schema({
     location: String,
     ischeckedin: Boolean,
     ischeckedout: Boolean,
+    entrytime: String
 })
 
 const RequestAttendanceModel = mongoose.model('attendancerequests', requestAttendanceSchema)
