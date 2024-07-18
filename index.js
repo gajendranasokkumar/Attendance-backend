@@ -680,7 +680,7 @@ app.post("/updateattendancerequest", async (request, response) => {
       .then(async (res) => {
         await AttendanceModel.findOneAndUpdate(
           { id: res.id, date: res.date },
-          { checkintime: res.time, ischeckedin: true, status: currentStatus },
+          { checkintime: res.time, ischeckedin: true, status: currentStatus, checkouttime: [] },
           { new: true }
         )
           .then((res) => response.json(res))
@@ -837,3 +837,63 @@ app.get('/getOptionsDetails', async (request, response) => {
     response.status(500).json({ error: 'Something went wrong' });
   }
 });
+
+
+app.get('/getworkinghours', async (req, res) => {
+  const { weekStart, weekEnd, id } = req.query;
+  
+  console.log('Request Query:', req.query);
+
+  try {
+    const workingHours = await getWorkingHoursForWeek(weekStart, weekEnd, id);
+    res.json(workingHours);
+  } catch (error) {
+    console.error('Error fetching working hours:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+async function getWorkingHoursForWeek(weekStart, weekEnd, id) {
+  const startDate = new Date(weekStart);
+  const endDate = new Date(weekEnd);
+
+  console.log('Date Range:', { startDate, endDate, id });
+
+  const documents = await AttendanceModel.find({
+    date: {
+      $gte: formatDateForQuery(startDate),
+      $lte: formatDateForQuery(endDate)
+    },
+    id: id,
+    status: { $not: { $regex: /^pending$/i } }
+  }).sort({ date: 1 });
+
+  console.log('Documents:', documents);
+
+  const workingHours = {};
+  
+  // Initialize workingHours object with all dates in the range
+  for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+    workingHours[formatDateForQuery(d)] = 0;
+  }
+
+  documents.forEach(doc => {
+    const hours = convertToDecimalHours(doc.totalWorkedTime);
+    workingHours[doc.date] += hours;
+  });
+
+  return workingHours;
+}
+
+function formatDateForQuery(date) {
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}-${month}-${year}`;
+} 
+
+function convertToDecimalHours(timeString) {
+  if (!timeString) return 0; // Handle cases where totalWorkedTime might be missing
+  const [hours, minutes, seconds] = timeString.split(':').map(Number);
+  return hours + minutes / 60 + seconds / 3600;
+}
