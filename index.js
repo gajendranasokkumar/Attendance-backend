@@ -842,7 +842,7 @@ app.get('/getOptionsDetails', async (request, response) => {
 app.get('/getworkinghours', async (req, res) => {
   const { weekStart, weekEnd, id } = req.query;
   
-  console.log('Request Query:', req.query);
+  // console.log('Request Query:', req.query);
 
   try {
     const workingHours = await getWorkingHoursForWeek(weekStart, weekEnd, id);
@@ -857,7 +857,7 @@ async function getWorkingHoursForWeek(weekStart, weekEnd, id) {
   const startDate = new Date(weekStart);
   const endDate = new Date(weekEnd);
 
-  console.log('Date Range:', { startDate, endDate, id });
+  // console.log('Date Range:', { startDate, endDate, id });
 
   const documents = await AttendanceModel.find({
     date: {
@@ -868,7 +868,7 @@ async function getWorkingHoursForWeek(weekStart, weekEnd, id) {
     status: { $not: { $regex: /^pending$/i } }
   }).sort({ date: 1 });
 
-  console.log('Documents:', documents);
+  // console.log('Documents:', documents);
 
   const workingHours = {};
   
@@ -897,3 +897,66 @@ function convertToDecimalHours(timeString) {
   const [hours, minutes, seconds] = timeString.split(':').map(Number);
   return hours + minutes / 60 + seconds / 3600;
 }
+
+app.get('/getattendancedetails', async (request, response) => {
+  const { id, month } = request.query;
+  console.log(id, month);
+
+  const startDate = new Date(`${month}-01`);
+  const endDate = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0);
+  console.log("Start Date:", startDate, "End Date:", endDate);
+
+  const finalresponse = [];
+
+  try {
+    const leavedocuments = await LeaveModel.find({
+      id: { $regex: new RegExp(`^${id}$`, 'i') },
+      status: { $regex: /^permitted$/i },
+      fromdate: { $ne: "" },
+      todate: { $ne: "" },
+      $expr: {
+        $and: [
+          { $gte: [{ $dateFromString: { dateString: "$fromdate", format: "%Y-%m-%d" } }, startDate] },
+          { $lte: [{ $dateFromString: { dateString: "$todate", format: "%Y-%m-%d" } }, endDate] }
+        ]
+      }
+    }).sort({ fromdate: 1 });
+
+    if (leavedocuments) {
+      for (let leave of leavedocuments) {
+        let currentDate = new Date(leave.fromdate);
+        const toDate = new Date(leave.todate);
+        
+        while (currentDate <= toDate) {
+          finalresponse.push({ date: currentDate.toISOString().slice(0, 10), status: "Leave" });
+          currentDate.setDate(currentDate.getDate() + 1);
+        }
+      }
+    }
+
+    const documents = await AttendanceModel.find({
+      id: { $regex: new RegExp(`^${id}$`, 'i') },
+      status: { $not: { $regex: /^pending$/i } },
+      date: { $ne: "" },
+      $expr: {
+        $and: [
+          { $gte: [{ $dateFromString: { dateString: "$date", format: "%d-%m-%Y" } }, startDate] },
+          { $lte: [{ $dateFromString: { dateString: "$date", format: "%d-%m-%Y" } }, endDate] }
+        ]
+      }
+    }).sort({ date: 1 });
+
+    if (documents) {
+      for (let doc of documents) {
+        finalresponse.push({ date: doc.date.split('-').reverse().join('-'), status: "Present" });
+      }
+    }
+
+    console.log("Final Response:", finalresponse);
+    response.json(finalresponse);
+
+  } catch (error) {
+    console.error("Error fetching documents:", error);
+    response.status(500).send("Error fetching documents");
+  }
+});
