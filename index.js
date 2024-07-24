@@ -45,10 +45,15 @@ const AttendanceModel = require("./models/AttendanceModel");
 const OTPModel = require("./models/OTPModel");
 const RequestAttendanceModel = require("./models/RequestAttendanceModel");
 
+require('dotenv').config();
+
+const dbURI =
+  process.env.NODE_ENV === "production"
+    ? process.env.MONGODB_URI_PRODUCTION
+    : process.env.MONGODB_URI_LOCAL;
+
 mongoose
-  // .connect("mongodb://localhost:27017/attendance", {
-  .connect("mongodb+srv://gajendran:Gajendran_04@cluster0.lo3mjnl.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0",{
-      // .connect("mongodb+srv://imaigen_gajju:gajju@cluster0.fdhordh.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0", {
+  .connect(dbURI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     }
