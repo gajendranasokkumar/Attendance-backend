@@ -134,3 +134,44 @@
 //       response.send(err);
 //     });
 // });
+
+
+// const express = require('express');
+// const mongoose = require('mongoose');
+// const cors = require('cors');
+// const routes = require('./routes');
+// require('dotenv').config();
+
+// const app = express();
+
+// app.use(express.json());
+// // app.use(cors());
+
+// app.use((req, res, next) => {
+//     res.setHeader("Access-Control-Allow-Origin", "*");
+//     res.setHeader(
+//       "Access-Control-Allow-Methods",
+//       "GET, POST, PUT, PATCH, DELETE"
+//     );
+//     res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+//     // res.setHeader("Access-Control-Allow-Credentials", true);
+//     next();
+//   });
+
+// const dbURI = process.env.NODE_ENV === "production"
+//   ? process.env.MONGODB_URI_PRODUCTION
+//   : process.env.MONGODB_URI_LOCAL;
+
+// mongoose.connect(dbURI, {
+//   useNewUrlParser: true,
+//   useUnifiedTopology: true,
+// })
+// .then(() => console.log("MongoDB connected"))
+// .catch((err) => console.error("MongoDB connection error:", err));
+
+// app.use('/', routes);
+
+// const PORT = process.env.PORT || 3000;
+// app.listen(PORT, () => {
+//   console.log(`Server is running on port ${PORT}`);
+// });
