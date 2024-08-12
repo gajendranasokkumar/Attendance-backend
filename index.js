@@ -20,11 +20,11 @@ const app = express();
 // const errorLogStream = fs.createWriteStream(path.join(logsDir, 'error.log'), { flags: 'a' });
 
 // app.use(morgan('combined', { stream: accessLogStream }));
-app.use(morgan('combined', {
-  stream: {
-    write: (message) => console.log(message.trim()) // Log to console
-  }
-}));
+// app.use(morgan('combined', {
+//   stream: {
+//     write: (message) => console.log(message.trim()) // Log to console
+//   }
+// }));
 // app.use(morgan('dev')); 
 
 app.use(express.json());
